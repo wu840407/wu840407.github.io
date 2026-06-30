@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ChengRung Wu (Roger) — AI Infrastructure & Speech-AI Engineer</title>
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --border:#283041;
+    --text:#e6edf3; --muted:#9aa7b4; --accent:#4a9eff; --accent2:#3fb950;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,Segoe UI,Roboto,"Microsoft JhengHei",sans-serif;
+    line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:880px;margin:0 auto;padding:64px 24px}
+  header{margin-bottom:56px;display:flex;align-items:center;gap:30px}
+  .avatar{width:130px;height:130px;border-radius:50%;object-fit:cover;
+    border:3px solid var(--border);flex-shrink:0}
+  h1{font-size:42px;font-weight:800;letter-spacing:-.5px}
+  .tag{color:var(--accent);font-size:18px;font-weight:600;margin-top:6px}
+  .links{margin-top:18px;display:flex;flex-wrap:wrap;gap:14px}
+  .links a{color:var(--text);text-decoration:none;font-size:14px;
+    border:1px solid var(--border);padding:7px 14px;border-radius:8px;transition:.15s}
+  .links a:hover{border-color:var(--accent);color:var(--accent)}
+  section{margin-bottom:48px}
+  h2{font-size:13px;text-transform:uppercase;letter-spacing:2px;color:var(--muted);
+    margin-bottom:18px;border-bottom:1px solid var(--border);padding-bottom:8px}
+  p.lead{font-size:17px;color:#cdd9e5}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:640px){.grid{grid-template-columns:1fr}.wrap{padding:40px 18px}h1{font-size:32px}
+    header{flex-direction:column;text-align:center;gap:18px}.links{justify-content:center}}
+  .pcard{background:var(--card);border:1px solid var(--border);border-radius:12px;
+    padding:20px;transition:.15s;text-decoration:none;color:inherit;display:block}
+  .pcard:hover{border-color:var(--accent);transform:translateY(-2px)}
+  .pcard h3{font-size:17px;margin-bottom:6px}
+  .pcard p{font-size:14px;color:var(--muted)}
+  .stack{margin-top:12px;display:flex;flex-wrap:wrap;gap:6px}
+  .stack span{font-size:11px;background:#1f2937;color:#9fb4cc;padding:3px 9px;border-radius:20px}
+  .skills{display:flex;flex-wrap:wrap;gap:8px}
+  .skills span{font-size:13px;background:var(--card);border:1px solid var(--border);
+    padding:6px 13px;border-radius:8px;color:#cdd9e5}
+  .row{display:flex;justify-content:space-between;flex-wrap:wrap;gap:6px;
+    padding:10px 0;border-bottom:1px solid var(--border)}
+  .row:last-child{border:0}
+  .row .r{color:var(--muted);font-size:14px}
+  footer{margin-top:56px;color:var(--muted);font-size:13px;text-align:center}
+  a.inline{color:var(--accent);text-decoration:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <img class="avatar" src="profile.jpg" alt="ChengRung Wu">
+    <div>
+      <h1>ChengRung Wu <span style="color:var(--muted);font-weight:400;font-size:24px">(Roger)</span></h1>
+      <div class="tag">AI Infrastructure &amp; Speech-AI Engineer</div>
+      <div class="links">
+        <a href="mailto:wu840407@gmail.com">✉ wu840407@gmail.com</a>
+        <a href="https://github.com/wu840407" target="_blank">GitHub</a>
+        <a href="https://www.linkedin.com/in/chengrung-wu/" target="_blank">LinkedIn</a>
+        <a href="https://leetcode.com/u/wu840407/" target="_blank">LeetCode</a>
+      </div>
+    </div>
+  </header>
+
+  <section>
+    <h2>About</h2>
+    <p class="lead">Software engineer with 9 years building and deploying mission-critical systems
+    in the national-security sector — progressing from engineer to technical lead. Now focused on
+    <strong>self-hosted / air-gapped LLM infrastructure</strong> and
+    <strong>low-resource speech AI</strong>. M.S. in Computer Science from NYCU; AWS Solutions Architect.
+    Open to opportunities in 2027.</p>
+  </section>
+
+  <section>
+    <h2>Featured Projects</h2>
+    <div class="grid">
+      <a class="pcard" href="https://github.com/wu840407/enterprise-airgapped-llm" target="_blank">
+        <h3>Enterprise Air-Gapped LLM Platform</h3>
+        <p>Production self-hosted LLM platform for air-gapped, security-critical environments.
+           30B MoE model across dual GPUs via tensor parallelism, fully offline, AD/LDAPS auth.</p>
+        <div class="stack"><span>vLLM</span><span>CUDA</span><span>Docker</span><span>PostgreSQL</span></div>
+      </a>
+      <a class="pcard" href="https://github.com/wu840407/YaYan_AI" target="_blank">
+        <h3>YaYan-AI — Speech Intelligence</h3>
+        <p>Fully-offline multi-dialect speech-to-text &amp; translation: 22 Chinese dialects + 40
+           languages, 5-speaker diarization, LLM-assisted correction.</p>
+        <div class="stack"><span>PyTorch</span><span>Whisper</span><span>pyannote</span><span>Qwen</span></div>
+      </a>
+      <a class="pcard" href="https://github.com/wu840407/openclaw-agents" target="_blank">
+        <h3>OpenClaw Agents</h3>
+        <p>Framework of autonomous LLM agents — OODA-loop decision support and news-intelligence
+           briefing — with persona-driven design and credential-isolated deployment.</p>
+        <div class="stack"><span>Python</span><span>LLM</span><span>Telegram</span></div>
+      </a>
+      <a class="pcard" href="https://github.com/wu840407/yolov5-parallel" target="_blank">
+        <h3>yolov5-parallel</h3>
+        <p>Parallelized YOLOv5 training and inference pipeline for multi-GPU throughput.</p>
+        <div class="stack"><span>Python</span><span>PyTorch</span><span>CUDA</span></div>
+      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Skills</h2>
+    <div class="skills">
+      <span>Python</span><span>C++</span><span>PyTorch</span><span>CUDA</span><span>Large Language Models</span>
+      <span>vLLM</span><span>Speech Recognition</span><span>Distributed Systems</span><span>Docker</span>
+      <span>Kafka</span><span>Linux</span><span>Elasticsearch</span><span>AWS</span><span>SQL</span>
+    </div>
+  </section>
+
+  <section>
+    <h2>Background</h2>
+    <div class="row"><span>M.S., Computer Science &amp; Information Engineering — NYCU</span><span class="r">2020–2023</span></div>
+    <div class="row"><span>B.E., Computer Science &amp; Information Engineering — National Defense University</span><span class="r">2013–2017</span></div>
+    <div class="row"><span>AWS Solutions Architect – Associate · CEH · CompTIA Security+ / Network+ · MCSA</span><span class="r">Certs</span></div>
+    <div class="row"><span>White-hat security — HITCON participant, CVE research</span><span class="r">Community</span></div>
+  </section>
+
+  <footer>
+    © 2026 ChengRung Wu · Built with plain HTML/CSS · <a class="inline" href="mailto:wu840407@gmail.com">Get in touch</a>
+  </footer>
+
+</div>
+</body>
+</html>
