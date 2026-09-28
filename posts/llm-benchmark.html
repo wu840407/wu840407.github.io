@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My benchmark said 42 ms. The math said 945 ms. — ChengRung Wu</title>
+<meta name="description" content="What I learned comparing vLLM and TensorRT-LLM on one RTX 3090 — mostly about measuring, not about engines.">
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --border:#283041;
+    --text:#e6edf3; --muted:#9aa7b4; --accent:#4a9eff; --accent2:#3fb950;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,Segoe UI,Roboto,"Microsoft JhengHei",sans-serif;
+    line-height:1.7;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:48px 24px 72px}
+  nav{display:flex;justify-content:space-between;gap:12px;font-size:14px;margin-bottom:40px}
+  nav a{color:var(--muted);text-decoration:none}
+  nav a:hover{color:var(--accent)}
+  h1{font-size:34px;font-weight:800;line-height:1.25;letter-spacing:-.3px}
+  .sub{color:var(--muted);font-size:17px;margin-top:10px}
+  .meta{color:var(--muted);font-size:13px;margin-top:14px;padding-bottom:28px;border-bottom:1px solid var(--border)}
+  h2{font-size:22px;font-weight:700;margin:40px 0 12px}
+  p{margin:14px 0;color:#cdd9e5;font-size:16.5px}
+  strong{color:var(--text)}
+  code{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:.9em;background:#1f2937;
+    padding:1px 6px;border-radius:5px;color:#e6edf3}
+  pre{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;
+    overflow-x:auto;margin:16px 0}
+  pre code{background:none;padding:0;font-size:14px}
+  .table{overflow-x:auto;margin:18px 0}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:480px}
+  th,td{border-bottom:1px solid var(--border);padding:9px 10px;text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:13px}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  ul,ol{margin:12px 0 12px 24px;color:#cdd9e5}
+  li{margin:6px 0}
+  a.inline{color:var(--accent);text-decoration:none}
+  a.inline:hover{text-decoration:underline}
+  .setup{color:var(--muted);font-size:14px;font-style:italic}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+  @media(max-width:640px){h1{font-size:27px}.wrap{padding:32px 18px 56px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav><a href="../index.html">← ChengRung Wu</a><a href="llm-benchmark-zh.html">中文版</a></nav>
+
+  <h1>My benchmark said 42 ms. The math said 945 ms.</h1>
+  <p class="sub">What I learned comparing vLLM and TensorRT-LLM on one RTX 3090 — mostly about measuring, not about engines.</p>
+  <div class="meta">September 2026 · ChengRung (Roger) Wu</div>
+
+  <p>The first run of my benchmark reported a time-to-first-token (TTFT) of <strong>42 ms</strong> for a 4,096-token prompt.</p>
+  <p>It looked great. Then I did the math.</p>
+
+  <h2>Do the math first</h2>
+  <p>Prefill — processing the prompt before the first token appears — is limited by compute. For a dense model it takes about <code>2 × parameters × tokens</code> operations. For Qwen3-8B and a 4,096-token prompt:</p>
+  <pre><code>2 × 8.19e9 × 4096 / 71e12 FLOP/s  ≈  945 ms</code></pre>
+  <p>71 TFLOPS is the RTX 3090's FP16 tensor-core peak. No software can do more math than the hardware allows. So if prefill must take about 945 ms, a 42 ms TTFT does not mean a fast engine. <strong>It means a broken measurement.</strong></p>
+  <p>The cause was simple. My test sent the same prompt every time, and vLLM's prefix caching served the prefill from cache. The server log showed it: <code>Prefix cache hit rate: 75.3%</code>. Every TTFT in that run measured a cache lookup, not real work.</p>
+  <p>The fix: every request now starts with a unique ID, so no two prompts share a prefix, and the server runs with <code>--no-enable-prefix-caching</code>. After that, prefill measured <strong>962.8 ms — 98% of the roofline</strong>.</p>
+  <p>The same trap exists in TensorRT-LLM: its KV cache block reuse is on by default.</p>
+
+  <h2>Both engines are already at the limit</h2>
+  <p>Decode — generating one token at a time — is limited by memory bandwidth, because every step reads all the weights again:</p>
+  <pre><code>16.38 GB / 936 GB/s  ≈  17.50 ms per token</code></pre>
+  <div class="table"><table>
+    <tr><th>Phase</th><th>Limited by</th><th class="n">Roofline</th><th class="n">vLLM</th><th class="n">TensorRT-LLM (<code>pytorch</code>)</th></tr>
+    <tr><td>Decode (batch 1)</td><td>memory bandwidth</td><td class="n">17.50 ms/token</td><td class="n">20.84 ms (84%)</td><td class="n">21.04 ms (83%)</td></tr>
+    <tr><td>Prefill (4,096 tokens)</td><td>compute</td><td class="n">945 ms</td><td class="n">962.8 ms (98%)</td><td class="n">990.8 ms (95%)</td></tr>
+  </table></div>
+  <p>Both engines reach 83–98% of what the hardware allows. There is almost no room left for one engine to beat the other. That explains the next result.</p>
+
+  <h2>"They are equally fast" is the wrong conclusion</h2>
+  <div class="table"><table>
+    <tr><th class="n">Concurrency</th><th class="n">vLLM</th><th class="n">TensorRT-LLM (<code>pytorch</code>)</th><th class="n">Gap</th></tr>
+    <tr><td class="n">1</td><td class="n">45.6 tok/s</td><td class="n">45.2 tok/s</td><td class="n">−0.9%</td></tr>
+    <tr><td class="n">8</td><td class="n">308.3 tok/s</td><td class="n">310.2 tok/s</td><td class="n">+0.6%</td></tr>
+    <tr><td class="n">32</td><td class="n">764.9 tok/s</td><td class="n">777.7 tok/s</td><td class="n">+1.7%</td></tr>
+  </table></div>
+  <p>The gap is about 2%. It is easy to write "the engines are equally fast" and move on.</p>
+  <p>But I ran each engine twice, alternating A-B-A-B so that drift over time could not favor either one. <strong>Running the same engine twice changed throughput by a median of 5.4%.</strong> The gap between engines is smaller than the gap between two runs of the same engine.</p>
+  <p>So the honest conclusion is not "they are equally fast." It is <strong>"this setup cannot tell them apart."</strong> Measuring the noise first is what makes that statement meaningful. (The likely cause of the noise is heat: GeForce cards cannot lock their clock speed.)</p>
+
+  <h2>The backend I was not actually measuring</h2>
+  <p>My second mistake became the most interesting result.</p>
+  <p>My first write-up described TensorRT-LLM as an ahead-of-time compiler. But the version I tested (1.2.0rc1) had two backends. The default, <code>pytorch</code>, does not compile ahead of time. The compiled path was <code>--backend tensorrt</code>. <strong>I was explaining one thing while measuring another.</strong></p>
+  <p>So I measured both. That makes ahead-of-time compilation the only difference:</p>
+  <div class="table"><table>
+    <tr><th></th><th class="n">Startup to first request</th></tr>
+    <tr><td>vLLM</td><td class="n">96 s</td></tr>
+    <tr><td>TensorRT-LLM, <code>pytorch</code> backend</td><td class="n">115 s</td></tr>
+    <tr><td>TensorRT-LLM, <code>tensorrt</code> backend</td><td class="n"><strong>1,225 s (20 min)</strong></td></tr>
+  </table></div>
+  <p>And the compiled engine was not faster. It got slower as concurrency went up:</p>
+  <div class="table"><table>
+    <tr><th class="n">Concurrency</th><th class="n"><code>pytorch</code></th><th class="n"><code>tensorrt</code></th><th class="n">Δ</th></tr>
+    <tr><td class="n">1</td><td class="n">44.6 tok/s</td><td class="n">45.7 tok/s</td><td class="n">+2.4%</td></tr>
+    <tr><td class="n">8</td><td class="n">302.1 tok/s</td><td class="n">279.7 tok/s</td><td class="n">−7.4%</td></tr>
+    <tr><td class="n">32</td><td class="n">756.1 tok/s</td><td class="n">616.0 tok/s</td><td class="n"><strong>−18.5%</strong></td></tr>
+  </table></div>
+  <p>At batch 1 the compiled engine is 2.4% faster — inside the noise. At batch 32 it is 18.5% slower — far outside it.</p>
+  <p>My best explanation is scheduling, not kernels. The <code>pytorch</code> backend adds new requests to the running batch right away. An engine compiled for fixed shapes has less freedom to reshape work at runtime. Under load, scheduling wins over specialized kernels.</p>
+  <p>Since then, newer TensorRT-LLM releases have deprecated the <code>--backend</code> flag of <code>trtllm-serve</code>, and <code>tensorrt</code> is no longer one of its options. My numbers show one reason that direction makes sense.</p>
+
+  <h2>Which engine should you pick?</h2>
+  <p>On this hardware and this model, <strong>the engine cannot change a number the hardware has already fixed.</strong> The choice is operational: startup time, how easy it is to deploy, and how fast you can iterate.</p>
+  <p>I would expect TensorRT-LLM to pull ahead only outside this setup:</p>
+  <ul>
+    <li><strong>FP8</strong> on Ada or Hopper GPUs, which Ampere cannot run natively</li>
+    <li><strong>INT4 / AWQ weights</strong>, which move decode off the bandwidth limit, so kernel quality starts to matter</li>
+    <li><strong>Multi-GPU tensor parallelism</strong>, where optimized communication matters</li>
+    <li><strong>Datacenter GPUs with locked clocks</strong>, which would shrink the 5.4% noise enough to see a 2% gap</li>
+  </ul>
+
+  <h2>Four lessons</h2>
+  <ol>
+    <li><strong>Do the math before you trust a measurement.</strong> Five minutes of roofline math caught a 20× error.</li>
+    <li><strong>Measure your noise.</strong> A difference smaller than run-to-run variance is not a difference.</li>
+    <li><strong>Check that you measured what you are describing.</strong> I was explaining ahead-of-time compilation while benchmarking the backend that does not do it.</li>
+    <li><strong>Change one thing at a time.</strong> Comparing the two TensorRT-LLM backends only worked because everything else stayed the same.</li>
+  </ol>
+
+  <p>Code, raw results, and charts — everything reruns with one command:
+     <a class="inline" href="https://github.com/wu840407/llm-inference-benchmark">github.com/wu840407/llm-inference-benchmark</a></p>
+  <p class="setup">Setup: RTX 3090 (24 GB, 936 GB/s), Qwen3-8B in BF16, vLLM 0.27.1, TensorRT-LLM 1.2.0rc1, WSL2. Three warmup rounds, then five measured rounds per setting; two alternating runs per engine.</p>
+
+  <footer>© 2026 ChengRung Wu · <a class="inline" href="../index.html">Home</a> · <a class="inline" href="mailto:wu840407@gmail.com">Get in touch</a></footer>
+
+</div>
+</body>
+</html>

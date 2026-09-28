@@ -90,11 +90,11 @@
     </div>
     <div class="exp">
       <div class="top"><span class="role">Senior Software Engineer</span><span class="date">2019 – 2025</span></div>
-      <p>Designed and deployed a large-scale signal &amp; geospatial data-processing platform, cutting analysis turnaround 60%; built a speaker-recognition / speech-to-text pipeline (−50% manual workload).</p>
+      <p>Designed and deployed a large-scale geospatial and multi-source data-processing platform, cutting analysis turnaround 60%; built a speech-analytics pipeline (ASR + speaker embeddings) that cut manual workload 50%.</p>
     </div>
     <div class="exp">
       <div class="top"><span class="role">Software Engineer</span><span class="date">2017 – 2019</span></div>
-      <p>Built a network-planning &amp; resource-optimization web application; delivered a virtualized data-processing system (+70% efficiency); scaled the engineering team from 1 to 10+.</p>
+      <p>Built a network-planning &amp; resource-optimization web application; consolidated legacy data processing onto VMware vCenter (10 hosts → 3); scaled the engineering team from 1 to 10+.</p>
     </div>
   </section>
 
@@ -107,23 +107,34 @@
            30B MoE model across dual GPUs via tensor parallelism, fully offline, AD/LDAPS auth.</p>
         <div class="stack"><span>vLLM</span><span>CUDA</span><span>Docker</span><span>PostgreSQL</span></div>
       </a>
-      <a class="pcard" href="https://github.com/wu840407/YaYan_AI" target="_blank">
-        <h3>YaYan-AI — Speech Intelligence</h3>
+      <a class="pcard" href="https://github.com/wu840407/llm-inference-benchmark" target="_blank">
+        <h3>LLM Inference Benchmark</h3>
+        <p>Reproducible vLLM vs TensorRT-LLM comparison on an RTX 3090, checked against the roofline.
+           Both engines reach 83–98% of the hardware limit; the compiled backend was 18.5% slower at batch 32.</p>
+        <div class="stack"><span>vLLM</span><span>TensorRT-LLM</span><span>CUDA</span><span>Python</span></div>
+      </a>
+      <a class="pcard" href="https://github.com/wu840407/YaYan-AI" target="_blank">
+        <h3>YaYan-AI — Multi-Dialect Speech AI</h3>
         <p>Fully-offline multi-dialect speech-to-text &amp; translation: 22 Chinese dialects + 40
            languages, 5-speaker diarization, LLM-assisted correction.</p>
         <div class="stack"><span>PyTorch</span><span>Whisper</span><span>pyannote</span><span>Qwen</span></div>
       </a>
       <a class="pcard" href="https://github.com/wu840407/openclaw-agents" target="_blank">
         <h3>OpenClaw Agents</h3>
-        <p>Framework of autonomous LLM agents — OODA-loop decision support and news-intelligence
+        <p>Framework of autonomous LLM agents — OODA-loop decision support and news
            briefing — with persona-driven design and credential-isolated deployment.</p>
         <div class="stack"><span>Python</span><span>LLM</span><span>Telegram</span></div>
       </a>
-      <a class="pcard" href="https://github.com/wu840407/yolov5-parallel" target="_blank">
-        <h3>yolov5-parallel</h3>
-        <p>Parallelized YOLOv5 training and inference pipeline for multi-GPU throughput.</p>
-        <div class="stack"><span>Python</span><span>PyTorch</span><span>CUDA</span></div>
-      </a>
+    </div>
+  </section>
+
+  <section>
+    <h2>Writing</h2>
+    <div class="pcard">
+      <h3><a class="inline" style="color:var(--text)" href="posts/llm-benchmark.html">My benchmark said 42 ms. The math said 945 ms.</a></h3>
+      <p>What I learned comparing vLLM and TensorRT-LLM on one RTX 3090 — mostly about measuring, not about engines.</p>
+      <p style="margin-top:10px"><a class="inline" href="posts/llm-benchmark.html">Read in English</a> · <a class="inline" href="posts/llm-benchmark-zh.html">中文版</a></p>
+      <div class="stack"><span>September 2026</span><span>LLM inference</span><span>Benchmarking</span></div>
     </div>
   </section>
 

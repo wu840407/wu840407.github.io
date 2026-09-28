@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="zh-Hant-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>我的 benchmark 量到 42 毫秒,算出來卻應該要 945 毫秒 — 吳承融</title>
+<meta name="description" content="在一張 RTX 3090 上比較 vLLM 和 TensorRT-LLM 學到的事 —— 大部分是關於怎麼量,而不是哪個引擎比較好。">
+<style>
+  :root{
+    --bg:#0d1117; --card:#161b22; --border:#283041;
+    --text:#e6edf3; --muted:#9aa7b4; --accent:#4a9eff; --accent2:#3fb950;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);
+    font-family:-apple-system,Segoe UI,Roboto,"Microsoft JhengHei","PingFang TC",sans-serif;
+    line-height:1.85;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:760px;margin:0 auto;padding:48px 24px 72px}
+  nav{display:flex;justify-content:space-between;gap:12px;font-size:14px;margin-bottom:40px}
+  nav a{color:var(--muted);text-decoration:none}
+  nav a:hover{color:var(--accent)}
+  h1{font-size:32px;font-weight:800;line-height:1.35}
+  .sub{color:var(--muted);font-size:17px;margin-top:10px}
+  .meta{color:var(--muted);font-size:13px;margin-top:14px;padding-bottom:28px;border-bottom:1px solid var(--border)}
+  h2{font-size:22px;font-weight:700;margin:40px 0 12px}
+  p{margin:14px 0;color:#cdd9e5;font-size:16.5px}
+  strong{color:var(--text)}
+  code{font-family:ui-monospace,Consolas,Menlo,monospace;font-size:.9em;background:#1f2937;
+    padding:1px 6px;border-radius:5px;color:#e6edf3}
+  pre{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;
+    overflow-x:auto;margin:16px 0}
+  pre code{background:none;padding:0;font-size:14px}
+  .table{overflow-x:auto;margin:18px 0}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:480px}
+  th,td{border-bottom:1px solid var(--border);padding:9px 10px;text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:13px}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  ul,ol{margin:12px 0 12px 24px;color:#cdd9e5}
+  li{margin:6px 0}
+  a.inline{color:var(--accent);text-decoration:none}
+  a.inline:hover{text-decoration:underline}
+  .setup{color:var(--muted);font-size:14px}
+  footer{margin-top:56px;padding-top:20px;border-top:1px solid var(--border);color:var(--muted);font-size:13px}
+  @media(max-width:640px){h1{font-size:26px}.wrap{padding:32px 18px 56px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <nav><a href="../index.html">← 吳承融 ChengRung Wu</a><a href="llm-benchmark.html">English</a></nav>
+
+  <h1>我的 benchmark 量到 42 毫秒,算出來卻應該要 945 毫秒</h1>
+  <p class="sub">在一張 RTX 3090 上比較 vLLM 和 TensorRT-LLM 學到的事 —— 大部分是關於「怎麼量」,而不是哪個引擎比較好。</p>
+  <div class="meta">2026 年 9 月 · 吳承融(Roger)</div>
+
+  <p>我的 benchmark 第一次跑出來:4,096 個 token 的 prompt,第一個 token 出來的時間(TTFT)只要 <strong>42 毫秒</strong>。</p>
+  <p>看起來很棒。然後我算了一下。</p>
+
+  <h2>先算,再量</h2>
+  <p>Prefill(在第一個 token 出來之前處理整段 prompt)受限於運算量。一般的 dense 模型大約要做 <code>2 × 參數量 × token 數</code> 次運算。以 Qwen3-8B、4,096 個 token 的 prompt 來算:</p>
+  <pre><code>2 × 8.19e9 × 4096 / 71e12 FLOP/s  ≈  945 毫秒</code></pre>
+  <p>71 TFLOPS 是 RTX 3090 的 FP16 tensor core 峰值。任何軟體都不可能讓硬體算得比這更多。所以如果 prefill 至少要 945 毫秒,量到 42 毫秒不代表引擎很快,<strong>而是代表量錯了。</strong></p>
+  <p>原因很簡單:我的測試程式每次都送同一個 prompt,vLLM 的前綴快取就直接從快取拿 prefill 的結果。伺服器的 log 寫得很清楚:<code>Prefix cache hit rate: 75.3%</code>。那一輪所有的 TTFT,量到的都是「查快取」,不是真正的運算。</p>
+  <p>修法:每個請求開頭都加上一個唯一的 ID,讓 prompt 彼此不共用前綴,伺服器也加上 <code>--no-enable-prefix-caching</code> 關掉前綴快取。修完之後,prefill 量到 <strong>962.8 毫秒,是理論上限的 98%</strong>。</p>
+  <p>TensorRT-LLM 也有同樣的陷阱:它的 KV cache 區塊重用預設是開啟的。</p>
+
+  <h2>兩個引擎都已經頂到硬體極限</h2>
+  <p>Decode(一次生成一個 token)受限於記憶體頻寬,因為每一步都要把全部權重重新讀一次:</p>
+  <pre><code>16.38 GB / 936 GB/s  ≈  每個 token 17.50 毫秒</code></pre>
+  <div class="table"><table>
+    <tr><th>階段</th><th>受限於</th><th class="n">理論值</th><th class="n">vLLM</th><th class="n">TensorRT-LLM(<code>pytorch</code>)</th></tr>
+    <tr><td>Decode(batch 1)</td><td>記憶體頻寬</td><td class="n">每 token 17.50 毫秒</td><td class="n">20.84 毫秒(84%)</td><td class="n">21.04 毫秒(83%)</td></tr>
+    <tr><td>Prefill(4,096 token)</td><td>運算量</td><td class="n">945 毫秒</td><td class="n">962.8 毫秒(98%)</td><td class="n">990.8 毫秒(95%)</td></tr>
+  </table></div>
+  <p>兩個引擎都達到硬體能力的 83–98%,已經沒什麼空間讓其中一個贏過另一個。這解釋了下一個結果。</p>
+
+  <h2>「兩個一樣快」是錯的結論</h2>
+  <div class="table"><table>
+    <tr><th class="n">同時請求數</th><th class="n">vLLM</th><th class="n">TensorRT-LLM(<code>pytorch</code>)</th><th class="n">差距</th></tr>
+    <tr><td class="n">1</td><td class="n">45.6 tok/s</td><td class="n">45.2 tok/s</td><td class="n">−0.9%</td></tr>
+    <tr><td class="n">8</td><td class="n">308.3 tok/s</td><td class="n">310.2 tok/s</td><td class="n">+0.6%</td></tr>
+    <tr><td class="n">32</td><td class="n">764.9 tok/s</td><td class="n">777.7 tok/s</td><td class="n">+1.7%</td></tr>
+  </table></div>
+  <p>差距大約 2%。很容易就寫下「兩個引擎一樣快」然後結案。</p>
+  <p>但我每個引擎都跑了兩次,而且用 A-B-A-B 交錯執行,讓時間造成的飄移不會偏向任何一方。<strong>同一個引擎跑兩次,吞吐量的差異中位數是 5.4%。</strong>兩個引擎之間的差距,比同一個引擎跑兩次的差距還小。</p>
+  <p>所以誠實的結論不是「兩個一樣快」,而是<strong>「這個環境分辨不出它們的差別」</strong>。先量出雜訊有多大,這句話才有意義。(雜訊最可能的來源是溫度:GeForce 顯示卡沒辦法鎖定時脈。)</p>
+
+  <h2>我其實沒量到我以為在量的東西</h2>
+  <p>我的第二個錯誤,變成了最有意思的發現。</p>
+  <p>我第一版的文章把 TensorRT-LLM 描述成「預先編譯」的引擎。但我測的版本(1.2.0rc1)有兩種 backend:預設的 <code>pytorch</code> 並不會預先編譯,要預先編譯得用 <code>--backend tensorrt</code>。<strong>我在解釋一種機制,量的卻是另一種。</strong></p>
+  <p>所以我兩種都量了,讓「預先編譯」成為唯一的差別:</p>
+  <div class="table"><table>
+    <tr><th></th><th class="n">啟動到可以接第一個請求</th></tr>
+    <tr><td>vLLM</td><td class="n">96 秒</td></tr>
+    <tr><td>TensorRT-LLM,<code>pytorch</code> backend</td><td class="n">115 秒</td></tr>
+    <tr><td>TensorRT-LLM,<code>tensorrt</code> backend</td><td class="n"><strong>1,225 秒(20 分鐘)</strong></td></tr>
+  </table></div>
+  <p>而且預先編譯的引擎並沒有比較快。同時請求數越多,它反而越慢:</p>
+  <div class="table"><table>
+    <tr><th class="n">同時請求數</th><th class="n"><code>pytorch</code></th><th class="n"><code>tensorrt</code></th><th class="n">差距</th></tr>
+    <tr><td class="n">1</td><td class="n">44.6 tok/s</td><td class="n">45.7 tok/s</td><td class="n">+2.4%</td></tr>
+    <tr><td class="n">8</td><td class="n">302.1 tok/s</td><td class="n">279.7 tok/s</td><td class="n">−7.4%</td></tr>
+    <tr><td class="n">32</td><td class="n">756.1 tok/s</td><td class="n">616.0 tok/s</td><td class="n"><strong>−18.5%</strong></td></tr>
+  </table></div>
+  <p>Batch 1 時預先編譯的版本快 2.4%,在雜訊範圍內;batch 32 時慢了 18.5%,遠遠超出雜訊。</p>
+  <p>我認為原因在排程,不在 kernel。<code>pytorch</code> backend 會把新進來的請求立刻加進正在跑的批次;為固定形狀預先編譯好的引擎,在執行時比較沒有彈性去重新安排工作。負載一高,排程比特化的 kernel 更重要。</p>
+  <p>後來,新版的 TensorRT-LLM 已經把 <code>trtllm-serve</code> 的 <code>--backend</code> 參數標成淘汰,<code>tensorrt</code> 也不再是它的選項。我的數字剛好說明了這個方向為什麼合理。</p>
+
+  <h2>那該選哪個引擎?</h2>
+  <p>在這張卡、這個模型上,<strong>引擎改變不了硬體已經定死的數字。</strong>選哪個是維運上的考量:啟動時間、部署難易度、改東西的速度。</p>
+  <p>我預期 TensorRT-LLM 只有在離開這個環境時才會拉開差距:</p>
+  <ul>
+    <li><strong>FP8</strong>:Ada 或 Hopper 世代的 GPU 才有原生支援,Ampere 沒有</li>
+    <li><strong>INT4 / AWQ 量化權重</strong>:decode 不再卡在頻寬上,kernel 寫得好不好才開始有差</li>
+    <li><strong>多卡張量平行</strong>:卡之間的通訊優化開始重要</li>
+    <li><strong>能鎖時脈的資料中心 GPU</strong>:能把 5.4% 的雜訊壓低,才看得出 2% 的差距</li>
+  </ul>
+
+  <h2>四個教訓</h2>
+  <ol>
+    <li><strong>相信量測結果之前,先算。</strong>五分鐘的 roofline 計算,就抓到一個 20 倍的錯誤。</li>
+    <li><strong>先量雜訊。</strong>比「同一個東西跑兩次的差異」還小的差距,不算差距。</li>
+    <li><strong>確認你量的就是你在描述的東西。</strong>我在解釋預先編譯,量的卻是不做預先編譯的那個 backend。</li>
+    <li><strong>一次只改一個變數。</strong>兩種 TensorRT-LLM backend 的比較之所以有意義,是因為其他條件全部相同。</li>
+  </ol>
+
+  <p>程式碼、原始數據和圖表,一個指令就能全部重跑:
+     <a class="inline" href="https://github.com/wu840407/llm-inference-benchmark">github.com/wu840407/llm-inference-benchmark</a></p>
+  <p class="setup">測試環境:RTX 3090(24 GB、936 GB/s)、Qwen3-8B(BF16)、vLLM 0.27.1、TensorRT-LLM 1.2.0rc1、WSL2。每種設定先暖機三輪、再正式量五輪;每個引擎交錯跑兩次。</p>
+
+  <footer>© 2026 吳承融 ChengRung Wu · <a class="inline" href="../index.html">首頁</a> · <a class="inline" href="mailto:wu840407@gmail.com">聯絡我</a></footer>
+
+</div>
+</body>
+</html>
