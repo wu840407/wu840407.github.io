@@ -74,11 +74,11 @@
 
   <section>
     <h2>About</h2>
-    <p class="lead">Software engineer with 9 years building and deploying mission-critical systems,
+    <p class="lead">Software engineer with 10 years building and deploying mission-critical systems,
     progressing from engineer to technical lead. Now focused on
-    <strong>self-hosted LLM infrastructure</strong> and <strong>inference optimization</strong>,
-    from constrained Turing GPUs to H200. M.S. in Computer Science from NYCU; AWS Solutions Architect.
-    Open to opportunities in 2027.</p>
+    <strong>self-hosted LLM infrastructure</strong> and <strong>inference optimization</strong>
+    on constrained GPUs. M.S. in Computer Science from NYCU; AWS Solutions Architect.
+    Open to AI infrastructure and LLM inference roles.</p>
   </section>
 
   <section>
@@ -86,11 +86,11 @@
     <div class="exp">
       <div class="top"><span class="role">Lead Software Engineer</span><span class="date">2025 – Present</span></div>
       <div class="org">Computer &amp; Communications Technology Research Office</div>
-      <p>Lead technical direction for AI infrastructure; built a self-hosted, fully-offline LLM platform (30B model on two GPUs, 80–120 tok/s); brought up an H200 server and moved larger models to FP8; mentor engineers.</p>
+      <p>Lead technical direction for AI infrastructure; built and operate a self-hosted, fully-offline LLM platform on two Quadro RTX 6000 GPUs (a 27B model in 4-bit, measured at 91 ms per token), used by a 12-engineer team; planned capacity for an H200 server, with deployment scheduled for December 2026.</p>
     </div>
     <div class="exp">
       <div class="top"><span class="role">Senior Software Engineer</span><span class="date">2019 – 2025</span></div>
-      <p>Designed and built a multi-source data-processing platform from scratch (Python, Elasticsearch, Docker): 2–3 million records a day, cutting analysis turnaround 60%; introduced GPU acceleration and containerization to legacy pipelines.</p>
+      <p>Designed and built a multi-source data-processing platform from scratch (Python, Elasticsearch, Docker): 2–3 million records a day, so work that took 10 people and ran a day behind now takes 4 people the same day; introduced GPU acceleration and containerization to legacy pipelines.</p>
     </div>
     <div class="exp">
       <div class="top"><span class="role">Software Engineer</span><span class="date">2017 – 2019</span></div>
@@ -103,8 +103,8 @@
     <div class="grid">
       <a class="pcard" href="https://github.com/wu840407/enterprise-airgapped-llm" target="_blank">
         <h3>Enterprise Air-Gapped LLM Platform</h3>
-        <p>Production self-hosted LLM platform for air-gapped, security-critical environments.
-           30B MoE model across dual GPUs via tensor parallelism, fully offline, AD/LDAPS auth.</p>
+        <p>Reference architecture for a self-hosted LLM platform in air-gapped environments.
+           4-bit quantized 27B–30B models across dual GPUs via tensor parallelism, fully offline, AD/LDAPS auth.</p>
         <div class="stack"><span>vLLM</span><span>CUDA</span><span>Docker</span><span>PostgreSQL</span></div>
       </a>
       <a class="pcard" href="https://github.com/wu840407/llm-inference-benchmark" target="_blank">
@@ -115,8 +115,8 @@
       </a>
       <a class="pcard" href="https://github.com/wu840407/YaYan-AI" target="_blank">
         <h3>YaYan-AI — Multi-Dialect Speech AI</h3>
-        <p>Fully-offline multi-dialect speech-to-text &amp; translation: 22 Chinese dialects + 40
-           languages, 5-speaker diarization, LLM-assisted correction.</p>
+        <p>Offline speech recognition that routes each segment to a dialect-specialised engine:
+           22.3% CER versus 37.6% for Whisper alone on a public benchmark (9 test sets, 3,142 utterances).</p>
         <div class="stack"><span>PyTorch</span><span>Whisper</span><span>pyannote</span><span>Qwen</span></div>
       </a>
       <a class="pcard" href="https://github.com/wu840407/openclaw-agents" target="_blank">
@@ -152,7 +152,7 @@
     <div class="row"><span>M.S., Computer Science &amp; Information Engineering — NYCU</span><span class="r">2020–2023</span></div>
     <div class="row"><span>B.E., Computer Science &amp; Information Engineering — National Defense University</span><span class="r">2013–2017</span></div>
     <div class="row"><span>AWS Solutions Architect – Associate · CEH · CompTIA Security+ / Network+ · MCSA</span><span class="r">Certs</span></div>
-    <div class="row"><span>White-hat security — HITCON participant, CVE research</span><span class="r">Community</span></div>
+    <div class="row"><span>White-hat security — HITCON participant</span><span class="r">Community</span></div>
   </section>
 
   <footer>
